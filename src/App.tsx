@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Settings as SettingsIcon, Smile } from 'lucide-react'
 import { Toolbar } from './components/Toolbar'
 import { Preview } from './components/Preview'
 import { ParamPanel } from './components/ParamPanel'
@@ -19,19 +20,11 @@ import {
   type Settings,
 } from './lib/storage'
 
-const SAMPLE_TEXT = `$[tada.speed=0s Decoskey] へようこそ
-
-文字を選んでボタンを押すだけで $[fg.color=6cf 装飾] が付きます。
-$[jelly 動き] や :misskey: も入れられます。`
-
 const TEXT_LIMIT = 3000
 
 export default function App() {
   const [settings, setSettings] = useState<Settings>(() => loadSettings())
-  const [text, setText] = useState<string>(() => {
-    const draft = loadDraft()
-    return draft === '' ? SAMPLE_TEXT : draft
-  })
+  const [text, setText] = useState<string>(() => loadDraft())
   const [selection, setSelection] = useState({ start: 0, end: 0 })
   const [emojis, setEmojis] = useState<Emoji[]>([])
   const [emojiFetchedAt, setEmojiFetchedAt] = useState<number | null>(null)
@@ -226,8 +219,14 @@ export default function App() {
           {settings.host}
           {emojiLoading ? '（絵文字取得中…）' : emojis.length > 0 ? `（絵文字 ${emojis.length.toLocaleString('ja-JP')}）` : ''}
         </span>
-        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSettingsOpen(true)}>
-          設定
+        <button
+          type="button"
+          className="icon-btn"
+          onClick={() => setSettingsOpen(true)}
+          title="設定"
+          aria-label="設定"
+        >
+          <SettingsIcon size={19} strokeWidth={1.8} aria-hidden="true" />
         </button>
       </header>
 
@@ -235,7 +234,6 @@ export default function App() {
         <section className="card">
           <Toolbar
             onPick={handlePick}
-            onOpenEmoji={() => setPickerOpen(true)}
             animateSamples={settings.animateSamples}
             useAnim={settings.useAnim}
             advanced={settings.advanced}
@@ -255,6 +253,18 @@ export default function App() {
             onKeyUp={syncSelection}
             onKeyDown={handleKeyDown}
           />
+          <div className="editor-bar">
+            <button
+              type="button"
+              className="icon-btn"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setPickerOpen(true)}
+              title="カスタム絵文字を挿入"
+              aria-label="カスタム絵文字を挿入"
+            >
+              <Smile size={21} strokeWidth={1.8} aria-hidden="true" />
+            </button>
+          </div>
           <ParamPanel span={currentSpan} onChangeArgs={handleChangeArgs} onUnwrap={handleUnwrap} />
         </section>
 

@@ -185,19 +185,32 @@ textarea {
   border-bottom-color: var(--accent);
 }
 
-.tab-emoji {
-  display: flex;
+/* ヘッダの歯車と、入力欄の下に置く絵文字ボタン */
+.icon-btn {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-left: auto;
-  padding: 7px 10px;
+  width: 38px;
+  height: 38px;
+  border: none;
   border-radius: var(--radius-sm);
+  background: transparent;
   color: var(--fg-dim);
+  cursor: pointer;
 }
 
-.tab-emoji:hover {
+.icon-btn:hover {
   background: var(--panel-2);
   color: var(--accent);
+}
+
+/* 入力欄の直下・右端。スマホでも横スクロールなしで届く位置に固定する */
+.editor-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 0 8px 6px;
 }
 
 .deco-grid {
@@ -274,7 +287,7 @@ textarea {
 .editor {
   width: 100%;
   min-height: 170px;
-  padding: 14px;
+  padding: 14px 14px 8px;
   border: none;
   border-top: solid 1px var(--divider);
   background: transparent;
@@ -743,4 +756,17 @@ textarea {
   color: var(--fg);
   font-size: 13px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+/* iOS は 16px 未満の入力欄をタップすると自動でズームするので、
+   スマホ幅では入力系のフォントを 16px 以上にしておく */
+@media (max-width: 768px) {
+  .editor,
+  .emoji-search,
+  .emoji-category,
+  .param-text,
+  .param select,
+  .setting input[type='text'] {
+    font-size: 16px;
+  }
 }

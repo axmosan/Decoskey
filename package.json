@@ -1,7 +1,7 @@
 {
   "name": "decoskey",
   "productName": "Decoskey",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Visual MFM decorator for Misskey",
   "author": "axmo",
   "private": true,

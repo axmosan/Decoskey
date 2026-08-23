@@ -1,13 +1,11 @@
 // 装飾ボタン群。ボタンの中身は構文名そのものに当の装飾を掛けた見本。
 
 import { useState, type MouseEvent as ReactMouseEvent } from 'react'
-import { Smile } from 'lucide-react'
 import { CATEGORIES, DECORATIONS, type CategoryId, type Deco } from '../lib/decorations'
 import { MfmView } from '../lib/mfmRender'
 
 type Props = {
   onPick: (deco: Deco) => void
-  onOpenEmoji: () => void
   animateSamples: boolean
   useAnim: boolean
   advanced: boolean
@@ -16,7 +14,7 @@ type Props = {
 /** ボタンにフォーカスを渡さず、入力欄の選択範囲を保ったままにする。 */
 const keepSelection = (e: ReactMouseEvent) => e.preventDefault()
 
-export function Toolbar({ onPick, onOpenEmoji, animateSamples, useAnim, advanced }: Props) {
+export function Toolbar({ onPick, animateSamples, useAnim, advanced }: Props) {
   const [category, setCategory] = useState<CategoryId>('basic')
   const decos = DECORATIONS.filter((d) => d.category === category)
 
@@ -36,16 +34,6 @@ export function Toolbar({ onPick, onOpenEmoji, animateSamples, useAnim, advanced
             {c.label}
           </button>
         ))}
-        <button
-          type="button"
-          className="tab tab-emoji"
-          onMouseDown={keepSelection}
-          onClick={onOpenEmoji}
-          title="カスタム絵文字を挿入"
-          aria-label="カスタム絵文字を挿入"
-        >
-          <Smile size={20} strokeWidth={1.8} aria-hidden="true" />
-        </button>
       </div>
 
       <div className={`deco-grid${animateSamples ? '' : ' is-frozen'}`}>
