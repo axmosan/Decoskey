@@ -2,6 +2,8 @@
 
 A preview-first editor for Misskey's MFM markup.
 
+**[Open Decoskey](https://axmosan.github.io/Decoskey/)**
+
 ![Decoskey](docs/screenshot.png)
 
 ## Features
