@@ -1,0 +1,746 @@
+/* 配色は Misskey 既定テーマ（Mi Dark / Mi Light）に合わせている。 */
+
+:root,
+[data-theme='dark'] {
+  --bg: #232323;
+  --panel: #2d2d2d;
+  --panel-2: #363636;
+  --panel-3: #3f3f3f;
+  --fg: rgb(199, 209, 216);
+  --fg-dim: rgba(199, 209, 216, 0.55);
+  --divider: rgba(255, 255, 255, 0.14);
+  --accent: #86b300;
+  --accent-bg: rgba(134, 179, 0, 0.15);
+  --accent-fg: #fff;
+  --link: #86b300;
+  --hashtag: #4cb8d4;
+  --mention: #da6d35;
+  --danger: #d44c4c;
+
+  color-scheme: dark;
+}
+
+[data-theme='light'] {
+  --bg: #f9f9f9;
+  --panel: #fff;
+  --panel-2: #f0f0f0;
+  --panel-3: #e6e6e6;
+  --fg: #676767;
+  --fg-dim: rgba(103, 103, 103, 0.7);
+  --divider: #e8e8e8;
+  --accent: #86b300;
+  --accent-bg: rgba(134, 179, 0, 0.15);
+  --accent-fg: #fff;
+  --link: #44a4c1;
+  --hashtag: #ff9156;
+  --mention: #86b300;
+  --danger: #d44c4c;
+
+  color-scheme: light;
+}
+
+:root {
+  --radius: 10px;
+  --radius-sm: 6px;
+  --font: 'Hiragino Maru Gothic Pro', 'BIZ UDGothic', Roboto, HelveticaNeue, Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font);
+  font-size: 15px;
+  -webkit-text-size-adjust: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+/* ── 全体 ───────────────────────────────────────────────── */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: solid 1px var(--divider);
+  background: var(--panel);
+}
+
+.app-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.app-title-accent {
+  color: var(--accent);
+}
+
+.app-host {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--fg-dim);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 入力とプレビューを縦に積む（Misskey の MFM お試しと同じ並び） */
+.shell {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 12px;
+  overflow-y: auto;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius);
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.card-preview {
+  flex: 1;
+  min-height: 180px;
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-bottom: solid 1px var(--divider);
+  color: var(--fg-dim);
+  font-size: 12px;
+}
+
+.counter.is-over {
+  color: var(--danger);
+}
+
+/* ── ツールバー ─────────────────────────────────────────── */
+.toolbar-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px 0;
+  border-bottom: solid 1px var(--divider);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.toolbar-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  flex: 0 0 auto;
+  padding: 9px 14px;
+  border: none;
+  background: transparent;
+  color: var(--fg-dim);
+  font-size: 13px;
+  cursor: pointer;
+  border-bottom: solid 2px transparent;
+}
+
+.tab:hover {
+  color: var(--fg);
+}
+
+.tab.is-active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.tab-emoji {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--fg-dim);
+}
+
+.tab-emoji:hover {
+  background: var(--panel-2);
+  color: var(--accent);
+}
+
+.deco-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+  gap: 6px;
+  padding: 8px;
+  max-height: 168px;
+  overflow-y: auto;
+}
+
+.deco-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 46px;
+  padding: 2px 4px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  color: var(--fg);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.deco-btn:hover {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.deco-btn:active {
+  transform: translateY(1px);
+}
+
+.deco-sample {
+  display: block;
+  max-width: 100%;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.deco-sample .mfm {
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.deco-grid.is-frozen .deco-btn *,
+.deco-grid.is-frozen .deco-btn *::before,
+.deco-grid.is-frozen .deco-btn *::after {
+  animation-play-state: paused;
+}
+
+.deco-grid.is-frozen .deco-btn:hover *,
+.deco-grid.is-frozen .deco-btn:hover *::before,
+.deco-grid.is-frozen .deco-btn:hover *::after {
+  animation-play-state: running;
+}
+
+.deco-badge {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  padding: 0 3px;
+  border-radius: 4px;
+  background: var(--panel-3);
+  color: var(--fg-dim);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+/* ── 入力欄 ─────────────────────────────────────────────── */
+.editor {
+  width: 100%;
+  min-height: 170px;
+  padding: 14px;
+  border: none;
+  border-top: solid 1px var(--divider);
+  background: transparent;
+  color: var(--fg);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.8;
+  resize: vertical;
+  outline: none;
+}
+
+.editor::placeholder {
+  color: var(--fg-dim);
+}
+
+/* ── パラメータ ─────────────────────────────────────────── */
+/* 装飾を選んでいない時も枠だけ残して、出入りで画面が跳ねないようにする */
+.params {
+  min-height: 62px;
+  border-top: solid 1px var(--divider);
+  padding: 8px 12px 10px;
+}
+
+.params-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.params-name {
+  color: var(--accent);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.params-note {
+  margin: 0;
+  color: var(--fg-dim);
+  font-size: 12px;
+}
+
+.params-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 6px 14px;
+}
+
+.param {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.param-label {
+  flex: 0 0 auto;
+  min-width: 46px;
+  color: var(--fg-dim);
+}
+
+.param input[type='range'] {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--accent);
+}
+
+.param-value {
+  flex: 0 0 auto;
+  min-width: 38px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.param input[type='color'] {
+  width: 34px;
+  height: 26px;
+  padding: 0;
+  border: solid 1px var(--divider);
+  border-radius: var(--radius-sm);
+  background: none;
+  cursor: pointer;
+}
+
+.param-text,
+.param select,
+.setting input[type='text'] {
+  min-width: 0;
+  padding: 5px 8px;
+  border: solid 1px var(--divider);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+}
+
+.param-text,
+.param select {
+  flex: 1;
+}
+
+.param-toggle {
+  gap: 6px;
+}
+
+.param-toggle input {
+  accent-color: var(--accent);
+}
+
+/* ── ノート風プレビュー ─────────────────────────────────── */
+.note {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  overflow: auto;
+}
+
+.note-avatar {
+  flex: 0 0 auto;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--panel-2);
+}
+
+.note-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.note-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 2px;
+  line-height: 1.4;
+}
+
+.note-name {
+  font-weight: 700;
+  color: var(--fg);
+}
+
+.note-handle {
+  color: var(--fg-dim);
+  font-size: 0.92em;
+}
+
+.note-empty {
+  margin: 0;
+  color: var(--fg-dim);
+}
+
+/* ── アクションバー ─────────────────────────────────────── */
+.actionbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px calc(9px + env(safe-area-inset-bottom));
+  border-top: solid 1px var(--divider);
+  background: var(--panel);
+}
+
+.actionbar-main {
+  display: flex;
+  flex: 1;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* ── ボタン ─────────────────────────────────────────────── */
+.btn {
+  padding: 9px 16px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  color: var(--fg);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  background: var(--panel-3);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.btn-sm {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-weight: 700;
+}
+
+.btn-primary:hover {
+  background: var(--accent);
+  filter: brightness(1.12);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--fg-dim);
+}
+
+.btn-ghost:hover {
+  background: var(--panel-2);
+  color: var(--fg);
+}
+
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── モーダル ───────────────────────────────────────────── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.modal {
+  display: flex;
+  flex-direction: column;
+  width: min(720px, 100%);
+  border-radius: var(--radius);
+  background: var(--panel);
+  overflow: hidden;
+}
+
+/* 中身が変わっても外形が動かないよう高さを固定する */
+.emoji-modal {
+  height: min(78dvh, 620px);
+}
+
+.settings-modal {
+  max-height: min(78dvh, 620px);
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: solid 1px var(--divider);
+}
+
+.modal-head h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 15px;
+}
+
+/* ── 絵文字ピッカー ─────────────────────────────────────── */
+.emoji-subhead {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-bottom: solid 1px var(--divider);
+}
+
+.emoji-size {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 320px;
+  font-size: 12px;
+}
+
+.emoji-size input[type='range'] {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--accent);
+}
+
+.emoji-search {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 11px;
+  border: solid 1px var(--divider);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+}
+
+.emoji-category {
+  max-width: 42%;
+  padding: 8px 9px;
+  border: solid 1px var(--divider);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+}
+
+.emoji-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 10px 10px;
+  overscroll-behavior: contain;
+}
+
+.emoji-heading {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 2px 5px;
+  background: var(--panel);
+  color: var(--fg-dim);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.emoji-count {
+  font-weight: 400;
+}
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--emoji-size, 46px), 1fr));
+  gap: 2px;
+}
+
+.emoji-divider {
+  height: 1px;
+  margin: 8px 2px;
+  background: var(--divider);
+}
+
+.emoji-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--emoji-size, 46px);
+  padding: 4px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+}
+
+.emoji-cell:hover {
+  background: var(--accent-bg);
+}
+
+.emoji-cell img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.emoji-note {
+  margin: 0;
+  padding: 10px 2px;
+  color: var(--fg-dim);
+  font-size: 12px;
+}
+
+.emoji-error {
+  color: var(--danger);
+}
+
+.emoji-sentinel {
+  height: 1px;
+}
+
+/* ── 設定 ───────────────────────────────────────────────── */
+.settings-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 14px;
+  overflow-y: auto;
+}
+
+.setting {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.setting-row {
+  display: flex;
+  gap: 8px;
+}
+
+.setting-row input {
+  flex: 1;
+}
+
+.setting-label {
+  display: block;
+  font-size: 13px;
+}
+
+.setting-note {
+  display: block;
+  color: var(--fg-dim);
+  font-size: 11px;
+}
+
+.setting-check {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 9px;
+}
+
+.setting-check input {
+  margin-top: 3px;
+  accent-color: var(--accent);
+}
+
+.segmented {
+  display: inline-flex;
+  width: fit-content;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+}
+
+.segmented-item {
+  padding: 5px 14px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--fg-dim);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.segmented-item.is-active {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+/* ── トースト ───────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(70px + env(safe-area-inset-bottom));
+  z-index: 60;
+  transform: translateX(-50%);
+  padding: 9px 18px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  color: var(--fg);
+  font-size: 13px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}

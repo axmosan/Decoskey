@@ -1,0 +1,253 @@
+/* MFM の描画スタイル。挙動は Misskey の仕様に合わせた独自実装。 */
+
+.mfm {
+  line-height: 1.7;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  /* Misskey と同じく改行をそのまま表示する */
+  white-space: pre-wrap;
+}
+
+/* ── 拡大（入れ子は 2 段目で半減、3 段目で無効） ───────────── */
+.mfm-x2 { --mfm-zoom: 200%; }
+.mfm-x3 { --mfm-zoom: 400%; }
+.mfm-x4 { --mfm-zoom: 600%; }
+.mfm-x2,
+.mfm-x3,
+.mfm-x4 {
+  display: inline-block;
+  font-size: var(--mfm-zoom);
+}
+:is(.mfm-x2, .mfm-x3, .mfm-x4) :is(.mfm-x2, .mfm-x3, .mfm-x4) {
+  font-size: calc(var(--mfm-zoom) / 2 + 50%);
+}
+:is(.mfm-x2, .mfm-x3, .mfm-x4) :is(.mfm-x2, .mfm-x3, .mfm-x4) :is(.mfm-x2, .mfm-x3, .mfm-x4) {
+  font-size: 100%;
+}
+
+/* ── アニメーション ──────────────────────────────────────── */
+@keyframes mfm-tada {
+  0% { transform: scale(1); }
+  10%, 20% { transform: scale(0.9) rotate(-3deg); }
+  30%, 50%, 70%, 90% { transform: scale(1.1) rotate(3deg); }
+  40%, 60%, 80% { transform: scale(1.1) rotate(-3deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+
+@keyframes mfm-jelly {
+  0% { transform: scale(1, 1); }
+  30% { transform: scale(1.25, 0.75); }
+  40% { transform: scale(0.75, 1.25); }
+  50% { transform: scale(1.15, 0.85); }
+  65% { transform: scale(0.95, 1.05); }
+  75% { transform: scale(1.05, 0.95); }
+  100% { transform: scale(1, 1); }
+}
+
+@keyframes mfm-jump {
+  0% { transform: translateY(0); }
+  25% { transform: translateY(-16px); }
+  50% { transform: translateY(0); }
+  75% { transform: translateY(-8px); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes mfm-bounce {
+  0% { transform: translateY(0) scale(1, 1); }
+  25% { transform: translateY(-16px) scale(1, 1); }
+  50% { transform: translateY(0) scale(1, 1); }
+  75% { transform: translateY(0) scale(1.5, 0.75); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+
+@keyframes mfm-spin {
+  0% { transform: rotate(0); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes mfm-spin-x {
+  0% { transform: perspective(128px) rotateX(0); }
+  100% { transform: perspective(128px) rotateX(360deg); }
+}
+@keyframes mfm-spin-y {
+  0% { transform: perspective(128px) rotateY(0); }
+  100% { transform: perspective(128px) rotateY(360deg); }
+}
+
+@keyframes mfm-shake {
+  0% { transform: translate(-3px, -1px) rotate(-8deg); }
+  20% { transform: translate(0, -1px) rotate(-10deg); }
+  40% { transform: translate(1px, -2px) rotate(0deg); }
+  60% { transform: translate(1px, 1px) rotate(6deg); }
+  80% { transform: translate(-2px, 0) rotate(-8deg); }
+  100% { transform: translate(-3px, -1px) rotate(-8deg); }
+}
+
+@keyframes mfm-twitch {
+  0% { transform: translate(4px, -3px); }
+  10% { transform: translate(-3px, 1px); }
+  20% { transform: translate(-6px, 2px); }
+  30% { transform: translate(7px, -3px); }
+  40% { transform: translate(-1px, 4px); }
+  50% { transform: translate(2px, -6px); }
+  60% { transform: translate(-5px, 1px); }
+  70% { transform: translate(3px, 3px); }
+  80% { transform: translate(-2px, -4px); }
+  90% { transform: translate(5px, 2px); }
+  100% { transform: translate(4px, -3px); }
+}
+
+@keyframes mfm-rainbow {
+  0% { filter: hue-rotate(0deg) contrast(150%) saturate(150%); }
+  100% { filter: hue-rotate(360deg) contrast(150%) saturate(150%); }
+}
+
+.mfm-rainbow-static {
+  display: inline-block;
+  background-image: linear-gradient(
+    to right,
+    #f00 0%, #ffa500 17%, #ff0 33%, #0f0 50%, #0ff 67%, #00f 83%, #f0f 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ── ぼかし ─────────────────────────────────────────────── */
+.mfm-blur {
+  display: inline-block;
+  filter: blur(6px);
+  transition: filter 0.3s;
+}
+.mfm-blur:hover {
+  filter: blur(0);
+}
+
+/* ── キラキラ（粒子の近似） ──────────────────────────────── */
+.mfm-sparkle {
+  position: relative;
+  display: inline-block;
+}
+.mfm-sparkle::before,
+.mfm-sparkle::after {
+  content: '✨';
+  position: absolute;
+  pointer-events: none;
+  font-size: 0.65em;
+  animation: mfm-sparkle-float 1.6s linear infinite;
+}
+.mfm-sparkle::before {
+  left: -0.45em;
+  top: -0.15em;
+}
+.mfm-sparkle::after {
+  right: -0.45em;
+  bottom: -0.15em;
+  animation-delay: 0.8s;
+}
+@keyframes mfm-sparkle-float {
+  0% { opacity: 0; transform: scale(0.4) translateY(0.2em); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.1) translateY(-0.6em); }
+}
+
+/* ── 各種要素 ───────────────────────────────────────────── */
+.mfm-quote {
+  margin: 0.4em 0;
+  padding: 0 0 0 0.8em;
+  border-left: 3px solid currentColor;
+  opacity: 0.6;
+}
+
+.mfm-code-inline {
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.92em;
+}
+
+.mfm-code-block {
+  margin: 0.5em 0;
+  padding: 0.7em 0.9em;
+  border-radius: 8px;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.9em;
+  overflow-x: auto;
+}
+
+.mfm-link {
+  color: var(--link);
+  text-decoration: none;
+}
+.mfm-link:hover {
+  text-decoration: underline;
+}
+
+.mfm-mention {
+  color: var(--mention);
+}
+
+.mfm-hashtag {
+  color: var(--hashtag);
+}
+
+.mfm-search {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 0;
+  margin: 0.2em 0;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-radius: 6px;
+  overflow: hidden;
+  font-size: 0.95em;
+}
+.mfm-search-query {
+  padding: 0.3em 0.7em;
+}
+.mfm-search-button {
+  padding: 0.3em 0.8em;
+  background: var(--accent);
+  color: #fff;
+}
+
+.mfm-unixtime {
+  display: inline-block;
+  padding: 0.2em 0.7em;
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-radius: 999px;
+  font-size: 0.9em;
+}
+
+.mfm-emoji {
+  height: 2em;
+  max-width: 100%;
+  vertical-align: middle;
+  object-fit: contain;
+}
+
+.mfm-emoji-missing {
+  padding: 0 0.15em;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--danger) 22%, transparent);
+  color: var(--danger);
+  font-size: 0.92em;
+}
+
+/* 絵文字一覧の取得が終わるまでは「無い絵文字」として赤く出さない */
+.note[data-emoji-loading='true'] .mfm-emoji-missing {
+  background: transparent;
+  color: inherit;
+  opacity: 0.5;
+}
+
+.mfm-parse-error {
+  color: #ff8fa3;
+}
+
+/* 動きを減らす設定を尊重する */
+@media (prefers-reduced-motion: reduce) {
+  .mfm-preview-freeze * {
+    animation-play-state: paused !important;
+  }
+}
