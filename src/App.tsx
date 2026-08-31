@@ -6,8 +6,15 @@ import { ParamPanel } from './components/ParamPanel'
 import { EmojiPicker } from './components/EmojiPicker'
 import { SettingsModal } from './components/SettingsModal'
 import type { Deco } from './lib/decorations'
-import { applyTemplate, insertText, toggleLinePrefix, wrapSelection, type Edit } from './lib/apply'
-import { buildFnHead, findEnclosingFn, replaceFnArgs, unwrapFn, type FnArgs } from './lib/mfmSyntax'
+import {
+  applyTemplate,
+  emojiTokenAt,
+  insertText,
+  toggleLinePrefix,
+  wrapSelection,
+  type Edit,
+} from './lib/apply'
+import { buildFnHead, enclosingFnChain, replaceFnArgs, unwrapFn, type FnArgs, type FnSpan } from './lib/mfmSyntax'
 import { buildEmojiMap, loadEmojis, type Emoji } from './lib/emoji'
 import {
   DEFAULT_SETTINGS,
@@ -26,6 +33,8 @@ export default function App() {
   const [settings, setSettings] = useState<Settings>(() => loadSettings())
   const [text, setText] = useState<string>(() => loadDraft())
   const [selection, setSelection] = useState({ start: 0, end: 0 })
+  /** パラメータパネルが掴んでいる fn の開始位置。null なら「最も内側」を自動で選ぶ。 */
+  const [pinnedFnStart, setPinnedFnStart] = useState<number | null>(null)
   const [emojis, setEmojis] = useState<Emoji[]>([])
   const [emojiFetchedAt, setEmojiFetchedAt] = useState<number | null>(null)
   const [emojiLoading, setEmojiLoading] = useState(false)
@@ -37,6 +46,8 @@ export default function App() {
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const pendingSelection = useRef<{ start: number; end: number; focus: boolean } | null>(null)
+  /** クリックで自動選択した絵文字。同じ所をもう一度押したらキャレットを置かせる。 */
+  const autoSelected = useRef<{ start: number; end: number } | null>(null)
 
   // ── 保存 ────────────────────────────────────────────────
   useEffect(() => {
@@ -88,16 +99,43 @@ export default function App() {
     el.setSelectionRange(pending.start, pending.end)
   }, [text])
 
-  const applyEdit = useCallback((edit: Edit, focus = true) => {
+  const applyEdit = useCallback((edit: Edit, focus = true, pin: number | null = null) => {
     pendingSelection.current = { start: edit.selStart, end: edit.selEnd, focus }
+    autoSelected.current = null
+    setPinnedFnStart(pin)
     setText(edit.text)
   }, [])
 
+  /** 入力欄側の操作で選択が動いたとき。パネルの掴み直しもここで解除する。 */
   const syncSelection = useCallback(() => {
     const el = textareaRef.current
     if (!el) return
+    setPinnedFnStart(null)
     setSelection({ start: el.selectionStart, end: el.selectionEnd })
   }, [])
+
+  /**
+   * `:emoji:` の上をクリックしたら、そのトークンごと選択する。
+   * そのまま装飾ボタンを押せば絵文字 1 個だけを囲める。
+   * 同じトークンをもう一度クリックしたときは素通しして、キャレットを置けるようにする。
+   */
+  const handleClickEditor = useCallback(() => {
+    const el = textareaRef.current
+    if (!el) return
+    const caret = el.selectionStart
+    if (caret === el.selectionEnd) {
+      const token = emojiTokenAt(text, caret)
+      const prev = autoSelected.current
+      if (token && !(prev && prev.start === token.start && prev.end === token.end)) {
+        el.setSelectionRange(token.start, token.end)
+        autoSelected.current = token
+        syncSelection()
+        return
+      }
+    }
+    autoSelected.current = null
+    syncSelection()
+  }, [syncSelection, text])
 
   /** 入力欄が今フォーカスされていればその選択、そうでなければ最後に覚えた選択を使う。 */
   const readSelection = useCallback(() => {
@@ -133,25 +171,53 @@ export default function App() {
   )
 
   // ── カーソル位置の装飾 ──────────────────────────────────
-  const currentSpan = useMemo(
-    () => findEnclosingFn(text, selection.start, selection.end),
+  /** カーソルを囲む装飾を外側から内側の順に。入れ子はパネルのタブで選び分ける。 */
+  const fnChain = useMemo(
+    () => enclosingFnChain(text, selection.start, selection.end),
     [text, selection.start, selection.end],
   )
+
+  const currentSpan = useMemo(() => {
+    if (pinnedFnStart !== null) {
+      const pinned = fnChain.find((s) => s.start === pinnedFnStart)
+      if (pinned) return pinned
+    }
+    return fnChain.at(-1) ?? null
+  }, [fnChain, pinnedFnStart])
 
   const handleChangeArgs = useCallback(
     (args: FnArgs) => {
       if (!currentSpan) return
       const result = replaceFnArgs(text, currentSpan, args)
-      // スライダー操作中に入力欄へフォーカスを奪わない
-      applyEdit({ text: result.text, selStart: result.span.contentStart, selEnd: result.span.contentStart }, false)
+      // 引数の長さが変わってもキャレットは元の場所に留める。
+      // contentStart へ飛ばすと、そこが内側の fn の開始位置と重なって
+      // パネルが内側（scale など）に切り替わってしまう。
+      const headStart = currentSpan.start + 2
+      const oldHeadEnd = headStart + currentSpan.head.length
+      const newHeadEnd = headStart + result.span.head.length
+      const shift = (pos: number) => {
+        if (pos <= headStart) return pos
+        if (pos >= oldHeadEnd) return pos + (newHeadEnd - oldHeadEnd)
+        return Math.min(pos, newHeadEnd)
+      }
+      // スライダー操作中に入力欄へフォーカスを奪わない。掴んでいる fn は保つ。
+      applyEdit(
+        { text: result.text, selStart: shift(selection.start), selEnd: shift(selection.end) },
+        false,
+        currentSpan.start,
+      )
     },
-    [applyEdit, currentSpan, text],
+    [applyEdit, currentSpan, selection.end, selection.start, text],
   )
 
   const handleUnwrap = useCallback(() => {
     if (!currentSpan) return
     applyEdit(unwrapFn(text, currentSpan))
   }, [applyEdit, currentSpan, text])
+
+  const handleSelectFn = useCallback((span: FnSpan) => {
+    setPinnedFnStart(span.start)
+  }, [])
 
   // ── 絵文字の挿入 ────────────────────────────────────────
   const handlePickEmoji = useCallback(
@@ -245,11 +311,13 @@ export default function App() {
             spellCheck={false}
             placeholder="ここに文章を書いて、装飾したい部分を選んでからボタンを押します"
             onChange={(e) => {
+              autoSelected.current = null
+              setPinnedFnStart(null)
               setText(e.target.value)
               setSelection({ start: e.target.selectionStart, end: e.target.selectionEnd })
             }}
             onSelect={syncSelection}
-            onClick={syncSelection}
+            onClick={handleClickEditor}
             onKeyUp={syncSelection}
             onKeyDown={handleKeyDown}
           />
@@ -265,7 +333,13 @@ export default function App() {
               <Smile size={21} strokeWidth={1.8} aria-hidden="true" />
             </button>
           </div>
-          <ParamPanel span={currentSpan} onChangeArgs={handleChangeArgs} onUnwrap={handleUnwrap} />
+          <ParamPanel
+            span={currentSpan}
+            chain={fnChain}
+            onSelectSpan={handleSelectFn}
+            onChangeArgs={handleChangeArgs}
+            onUnwrap={handleUnwrap}
+          />
         </section>
 
         <section className="card card-preview">

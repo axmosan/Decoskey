@@ -109,11 +109,19 @@ export function scanFnSpans(text: string): FnSpan[] {
   return spans.sort((a, b) => a.start - b.start)
 }
 
+/**
+ * カーソル（または選択範囲）を含む fn を、外側から内側の順に並べて返す。
+ * `$[position … $[scale … ]]` の内側なら [position, scale]。
+ */
+export function enclosingFnChain(text: string, caretStart: number, caretEnd = caretStart): FnSpan[] {
+  return scanFnSpans(text)
+    .filter((s) => s.start <= caretStart && caretEnd <= s.end)
+    .sort((a, b) => a.depth - b.depth)
+}
+
 /** カーソル（または選択範囲）を含む最も内側の fn を返す。 */
 export function findEnclosingFn(text: string, caretStart: number, caretEnd = caretStart): FnSpan | null {
-  const hits = scanFnSpans(text).filter((s) => s.start <= caretStart && caretEnd <= s.end)
-  if (hits.length === 0) return null
-  return hits.reduce((deepest, s) => (s.depth >= deepest.depth ? s : deepest))
+  return enclosingFnChain(text, caretStart, caretEnd).at(-1) ?? null
 }
 
 /** fn の引数だけを差し替えた新しいテキストを返す。 */

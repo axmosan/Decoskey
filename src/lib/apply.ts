@@ -64,6 +64,24 @@ export function toggleLinePrefix(value: string, start: number, end: number, pref
   }
 }
 
+/** `:name:` の形をしたカスタム絵文字トークン。 */
+const EMOJI_TOKEN = /:[a-zA-Z0-9_+-]+:/g
+
+/**
+ * pos を含む `:name:` の範囲を返す。クリックだけで絵文字ひとつを
+ * 選択状態にし、そのまま装飾ボタンを押せるようにするために使う。
+ */
+export function emojiTokenAt(value: string, pos: number): { start: number; end: number } | null {
+  EMOJI_TOKEN.lastIndex = 0
+  for (let m = EMOJI_TOKEN.exec(value); m !== null; m = EMOJI_TOKEN.exec(value)) {
+    const start = m.index
+    const end = start + m[0].length
+    if (pos < start) return null // 以降は全て右側なので探す必要がない
+    if (pos <= end) return { start, end }
+  }
+  return null
+}
+
 /** 選択範囲をそのまま置き換える（絵文字挿入など）。 */
 export function insertText(value: string, start: number, end: number, snippet: string): Edit {
   return {

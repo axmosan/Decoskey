@@ -1,10 +1,14 @@
 // カーソルが乗っている $[...] のパラメータをその場で調整するパネル。
 
+import { Fragment } from 'react'
 import { DECO_BY_FN, type DecoParam } from '../lib/decorations'
 import type { FnArgs, FnSpan } from '../lib/mfmSyntax'
 
 type Props = {
   span: FnSpan | null
+  /** カーソルを囲む装飾（外側 → 内側）。入れ子のときはここから選び分ける。 */
+  chain: FnSpan[]
+  onSelectSpan: (span: FnSpan) => void
   onChangeArgs: (args: FnArgs) => void
   onUnwrap: () => void
 }
@@ -22,7 +26,7 @@ function hexToInputColor(value: string | true | undefined, def: string): string 
   return `#${hex.padEnd(6, '0')}`
 }
 
-export function ParamPanel({ span, onChangeArgs, onUnwrap }: Props) {
+export function ParamPanel({ span, chain, onSelectSpan, onChangeArgs, onUnwrap }: Props) {
   if (!span) {
     return <section className="params params-empty" />
   }
@@ -49,8 +53,36 @@ export function ParamPanel({ span, onChangeArgs, onUnwrap }: Props) {
   return (
     <section className="params">
       <header className="params-head">
+        {chain.length > 1 ? (
+          <div className="params-chain">
+            {chain.map((s, i) => (
+              <Fragment key={s.start}>
+                {i > 0 ? (
+                  <span className="params-chain-sep" aria-hidden="true">
+                    ›
+                  </span>
+                ) : null}
+                <button
+                  type="button"
+                  className={`params-crumb${s.start === span.start ? ' is-active' : ''}`}
+                  title={`$[${s.head} …] を調整する`}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => onSelectSpan(s)}
+                >
+                  {s.name}
+                </button>
+              </Fragment>
+            ))}
+          </div>
+        ) : null}
         <code className="params-name">$[{span.head} …]</code>
-        <button type="button" className="btn btn-ghost btn-sm" onClick={onUnwrap} title="この装飾だけを外す">
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm params-unwrap"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={onUnwrap}
+          title="この装飾だけを外す"
+        >
           解除
         </button>
       </header>
