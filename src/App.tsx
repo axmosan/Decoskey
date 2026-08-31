@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Settings as SettingsIcon, Smile } from 'lucide-react'
+import { Redo2, Settings as SettingsIcon, Smile, Undo2 } from 'lucide-react'
 import { Toolbar } from './components/Toolbar'
 import { Preview } from './components/Preview'
 import { ParamPanel } from './components/ParamPanel'
@@ -28,6 +28,11 @@ import {
 } from './lib/storage'
 
 const TEXT_LIMIT = 3000
+/** 取り消し履歴の上限と、連続操作を 1 手にまとめる間隔 */
+const HISTORY_LIMIT = 100
+const COALESCE_MS = 800
+
+type Snapshot = { text: string; selStart: number; selEnd: number }
 
 export default function App() {
   const [settings, setSettings] = useState<Settings>(() => loadSettings())
@@ -48,6 +53,22 @@ export default function App() {
   const pendingSelection = useRef<{ start: number; end: number; focus: boolean } | null>(null)
   /** クリックで自動選択した絵文字。同じ所をもう一度押したらキャレットを置かせる。 */
   const autoSelected = useRef<{ start: number; end: number } | null>(null)
+  /**
+   * 取り消し／やり直しの履歴。ブラウザ標準の undo は、React が値を差し替える
+   * 装飾ボタンやスライダーの操作で壊れてしまうので自前で持つ。
+   */
+  const historyRef = useRef<{
+    past: Snapshot[]
+    future: Snapshot[]
+    lastKind: string | null
+    lastAt: number
+  }>({ past: [], future: [], lastKind: null, lastAt: 0 })
+  /** ボタンの活性だけを state に写す（履歴の実体は ref 側） */
+  const [history, setHistory] = useState({ canUndo: false, canRedo: false })
+  const syncHistory = useCallback(() => {
+    const h = historyRef.current
+    setHistory({ canUndo: h.past.length > 0, canRedo: h.future.length > 0 })
+  }, [])
 
   // ── 保存 ────────────────────────────────────────────────
   useEffect(() => {
@@ -99,12 +120,59 @@ export default function App() {
     el.setSelectionRange(pending.start, pending.end)
   }, [text])
 
-  const applyEdit = useCallback((edit: Edit, focus = true, pin: number | null = null) => {
-    pendingSelection.current = { start: edit.selStart, end: edit.selEnd, focus }
-    autoSelected.current = null
-    setPinnedFnStart(pin)
-    setText(edit.text)
-  }, [])
+  /**
+   * 取り消し履歴に「今の状態」を積む。
+   * kind が前回と同じで、かつ間が空いていなければ 1 手にまとめる
+   * （1 文字ずつ・スライダー 1 目盛りずつ戻さないため）。kind が null なら必ず 1 手として積む。
+   */
+  const record = useCallback(
+    (kind: string | null) => {
+      const h = historyRef.current
+      const now = performance.now()
+      const merge = kind !== null && kind === h.lastKind && now - h.lastAt < COALESCE_MS
+      if (!merge) {
+        h.past.push({ text, selStart: selection.start, selEnd: selection.end })
+        if (h.past.length > HISTORY_LIMIT) h.past.shift()
+      }
+      h.future = []
+      h.lastKind = kind
+      h.lastAt = now
+      syncHistory()
+    },
+    [selection.end, selection.start, syncHistory, text],
+  )
+
+  /** 履歴に積まずにテキストを差し替える。全ての編集はここを通る。 */
+  const applyEdit = useCallback(
+    (edit: Edit, focus = true, pin: number | null = null, kind?: string | null) => {
+      if (kind !== undefined) record(kind)
+      pendingSelection.current = { start: edit.selStart, end: edit.selEnd, focus }
+      autoSelected.current = null
+      setPinnedFnStart(pin)
+      setText(edit.text)
+    },
+    [record],
+  )
+
+  const undo = useCallback(() => {
+    const h = historyRef.current
+    const prev = h.past.pop()
+    if (!prev) return
+    h.future.push({ text, selStart: selection.start, selEnd: selection.end })
+    h.lastKind = null
+    syncHistory()
+    applyEdit({ text: prev.text, selStart: prev.selStart, selEnd: prev.selEnd })
+  }, [applyEdit, selection.end, selection.start, syncHistory, text])
+
+  const redo = useCallback(() => {
+    const h = historyRef.current
+    const next = h.future.pop()
+    if (!next) return
+    h.past.push({ text, selStart: selection.start, selEnd: selection.end })
+    h.lastKind = null
+    syncHistory()
+    applyEdit({ text: next.text, selStart: next.selStart, selEnd: next.selEnd })
+  }, [applyEdit, selection.end, selection.start, syncHistory, text])
 
   /** 入力欄側の操作で選択が動いたとき。パネルの掴み直しもここで解除する。 */
   const syncSelection = useCallback(() => {
@@ -153,19 +221,19 @@ export default function App() {
       const insert = deco.insert
 
       if (insert.type === 'wrap') {
-        applyEdit(wrapSelection(text, start, end, insert.before, insert.after))
+        applyEdit(wrapSelection(text, start, end, insert.before, insert.after), true, null, null)
         return
       }
       if (insert.type === 'linePrefix') {
-        applyEdit(toggleLinePrefix(text, start, end, insert.prefix))
+        applyEdit(toggleLinePrefix(text, start, end, insert.prefix), true, null, null)
         return
       }
       if (insert.type === 'template') {
-        applyEdit(applyTemplate(text, start, end, insert.template, insert.placeholders))
+        applyEdit(applyTemplate(text, start, end, insert.template, insert.placeholders), true, null, null)
         return
       }
       const head = buildFnHead(insert.name, deco.initialArgs ?? {})
-      applyEdit(wrapSelection(text, start, end, `$[${head} `, ']'))
+      applyEdit(wrapSelection(text, start, end, `$[${head} `, ']'), true, null, null)
     },
     [applyEdit, readSelection, text],
   )
@@ -186,7 +254,7 @@ export default function App() {
   }, [fnChain, pinnedFnStart])
 
   const handleChangeArgs = useCallback(
-    (args: FnArgs) => {
+    (args: FnArgs, changedKey: string) => {
       if (!currentSpan) return
       const result = replaceFnArgs(text, currentSpan, args)
       // 引数の長さが変わってもキャレットは元の場所に留める。
@@ -201,10 +269,12 @@ export default function App() {
         return Math.min(pos, newHeadEnd)
       }
       // スライダー操作中に入力欄へフォーカスを奪わない。掴んでいる fn は保つ。
+      // 同じつまみを続けて動かしている間は取り消し履歴を 1 手にまとめる。
       applyEdit(
         { text: result.text, selStart: shift(selection.start), selEnd: shift(selection.end) },
         false,
         currentSpan.start,
+        `param:${currentSpan.start}:${changedKey}`,
       )
     },
     [applyEdit, currentSpan, selection.end, selection.start, text],
@@ -212,7 +282,7 @@ export default function App() {
 
   const handleUnwrap = useCallback(() => {
     if (!currentSpan) return
-    applyEdit(unwrapFn(text, currentSpan))
+    applyEdit(unwrapFn(text, currentSpan), true, null, null)
   }, [applyEdit, currentSpan, text])
 
   const handleSelectFn = useCallback((span: FnSpan) => {
@@ -223,7 +293,7 @@ export default function App() {
   const handlePickEmoji = useCallback(
     (name: string) => {
       const { start, end } = readSelection()
-      applyEdit(insertText(text, start, end, `:${name}:`))
+      applyEdit(insertText(text, start, end, `:${name}:`), true, null, null)
       setRecent(pushRecentEmoji(name))
       setPickerOpen(false)
     },
@@ -253,8 +323,9 @@ export default function App() {
   }, [settings.host, text])
 
   const handleClear = useCallback(() => {
+    if (text === '') return // 変化しない編集を履歴に積まない
     if (text.trim() !== '' && !window.confirm('入力内容を消します。よろしいですか？')) return
-    applyEdit({ text: '', selStart: 0, selEnd: 0 })
+    applyEdit({ text: '', selStart: 0, selEnd: 0 }, true, null, null)
   }, [applyEdit, text])
 
   const handleKeyDown = useCallback(
@@ -264,14 +335,35 @@ export default function App() {
       const el = e.currentTarget
       if (key === 'b') {
         e.preventDefault()
-        applyEdit(wrapSelection(text, el.selectionStart, el.selectionEnd, '**', '**'))
+        applyEdit(wrapSelection(text, el.selectionStart, el.selectionEnd, '**', '**'), true, null, null)
       } else if (key === 'i') {
         e.preventDefault()
-        applyEdit(wrapSelection(text, el.selectionStart, el.selectionEnd, '<i>', '</i>'))
+        applyEdit(wrapSelection(text, el.selectionStart, el.selectionEnd, '<i>', '</i>'), true, null, null)
       }
     },
     [applyEdit, text],
   )
+
+  // Ctrl+Z / Ctrl+Y（Ctrl+Shift+Z）。スライダーを触った直後でも効くよう window で拾い、
+  // 絵文字検索や設定の入力欄ではブラウザ標準の取り消しに任せる。
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.isComposing) return
+      const key = e.key.toLowerCase()
+      if (key !== 'z' && key !== 'y') return
+      if (pickerOpen || settingsOpen) return
+      const el = e.target as HTMLElement | null
+      if (el && el !== textareaRef.current) {
+        if (el.isContentEditable) return
+        if (el instanceof HTMLInputElement && el.type !== 'range' && el.type !== 'color') return
+      }
+      e.preventDefault()
+      if (key === 'y' || e.shiftKey) redo()
+      else undo()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [pickerOpen, redo, settingsOpen, undo])
 
   const overLimit = text.length > TEXT_LIMIT
 
@@ -311,6 +403,7 @@ export default function App() {
             spellCheck={false}
             placeholder="ここに文章を書いて、装飾したい部分を選んでからボタンを押します"
             onChange={(e) => {
+              record('type')
               autoSelected.current = null
               setPinnedFnStart(null)
               setText(e.target.value)
@@ -322,6 +415,30 @@ export default function App() {
             onKeyDown={handleKeyDown}
           />
           <div className="editor-bar">
+            <div className="editor-bar-group">
+              <button
+                type="button"
+                className="icon-btn"
+                disabled={!history.canUndo}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={undo}
+                title="元に戻す (Ctrl+Z)"
+                aria-label="元に戻す"
+              >
+                <Undo2 size={20} strokeWidth={1.8} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                className="icon-btn"
+                disabled={!history.canRedo}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={redo}
+                title="やり直す (Ctrl+Y)"
+                aria-label="やり直す"
+              >
+                <Redo2 size={20} strokeWidth={1.8} aria-hidden="true" />
+              </button>
+            </div>
             <button
               type="button"
               className="icon-btn"

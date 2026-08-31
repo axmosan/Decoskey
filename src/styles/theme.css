@@ -203,18 +203,30 @@ textarea {
   cursor: pointer;
 }
 
-.icon-btn:hover {
+.icon-btn:hover:not(:disabled) {
   background: var(--panel-2);
   color: var(--accent);
 }
 
-/* 入力欄の直下・右端。スマホでも横スクロールなしで届く位置に固定する */
+.icon-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* 入力欄の直下。左に取り消し／やり直し、右に絵文字。
+   スマホでも横スクロールなしで届く位置に固定する */
 .editor-bar {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 4px;
   padding: 0 8px 6px;
+}
+
+.editor-bar-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
 }
 
 .deco-grid {

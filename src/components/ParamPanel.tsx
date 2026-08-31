@@ -9,7 +9,8 @@ type Props = {
   /** カーソルを囲む装飾（外側 → 内側）。入れ子のときはここから選び分ける。 */
   chain: FnSpan[]
   onSelectSpan: (span: FnSpan) => void
-  onChangeArgs: (args: FnArgs) => void
+  /** changedKey は「同じつまみの連続操作」を取り消し履歴でまとめるための目印。 */
+  onChangeArgs: (args: FnArgs, changedKey: string) => void
   onUnwrap: () => void
 }
 
@@ -38,16 +39,16 @@ export function ParamPanel({ span, chain, onSelectSpan, onChangeArgs, onUnwrap }
     const next: FnArgs = { ...span.args }
     if (value === undefined) delete next[key]
     else next[key] = value
-    onChangeArgs(next)
+    onChangeArgs(next, key)
   }
 
-  const setFlagSet = (keys: string[], value: string) => {
+  const setFlagSet = (id: string, keys: string[], value: string) => {
     const next: FnArgs = { ...span.args }
     for (const k of keys) delete next[k]
     for (const k of value.split(',')) {
       if (k !== '') next[k] = true
     }
-    onChangeArgs(next)
+    onChangeArgs(next, id)
   }
 
   return (
@@ -171,7 +172,7 @@ export function ParamPanel({ span, chain, onSelectSpan, onChangeArgs, onUnwrap }
               return (
                 <label key={param.id} className="param">
                   <span className="param-label">{param.label}</span>
-                  <select value={current} onChange={(e) => setFlagSet(param.keys, e.target.value)}>
+                  <select value={current} onChange={(e) => setFlagSet(param.id, param.keys, e.target.value)}>
                     {param.options.map((o) => (
                       <option key={o.value} value={o.value}>
                         {o.label}
